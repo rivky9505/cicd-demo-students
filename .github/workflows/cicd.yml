@@ -46,22 +46,21 @@ jobs:
               with:
                 registry: ${{ env.REGISTRY }}
                 username: ${{ github.actor }}
-                password: ${{ secrets.IMAGE_PUSH_TOKEN }}    
-            # - name: Extract metadata for Docker
-            #   id: meta
-            #   uses: docker/metadata-action@v3
-            #   with:
-            #     images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            #     tags: |
-            #       type=semver,pattern={{version}}
-            #       type=sha,format=short
-            #       type=ref,event=branch
-            #       latest
+                password: ${{ secrets.GITHUB_TOKEN }}    
+            - name: Extract metadata for Docker
+              id: meta
+              uses: docker/metadata-action@v3
+              with:
+                images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                tags: |
+                  type=semver,pattern={{version}}
+                  type=sha,format=short
+                  type=ref,event=branch
+                  latest
             - name: Build and push Docker image
               uses: docker/build-push-action@v2
               with:
                 context: .
                 push: true
-                tags: latest
-                # tags: ${{ steps.meta.outputs.tags }}
-                # labels: ${{ steps.meta.outputs.labels }}
+                tags: ${{ steps.meta.outputs.tags }}
+                labels: ${{ steps.meta.outputs.labels }}
