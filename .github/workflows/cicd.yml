@@ -23,25 +23,85 @@ jobs:
                   python-version: '3.11' 
             - run: pip install --upgrade pip && pip install -r requirements.txt
             - run : pytest
-    build-and-publish:
-        runs-on: ubuntu-latest
-        needs: test
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v2
-          - name: Log in to GitHub Container Registry
-            uses: docker/login-action@v1
-            with:
-              registry: ghcr.io
-              username: ${{ github.actor }}
-              password: ${{ secrets.GITHUB_TOKEN }}
-          - name: Build Docker image
-            uses: docker/build-push-action@v2
-            with:
-              context: .
-              push: false
-              tags: ghcr.io/${{ github.repository }}:latest
-
-            
+    build-and-push:
+    name: Build and Push
+    needs: test
+    runs-on: ubuntu-latest
+    # Only run on main branch, not PRs
+    if: github.event_name != 'pull_request'
     
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=semver,pattern={{version}}
+          type=sha,format=short
+          type=ref,event=branch
+          latest
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+    build-and-push:
+        name: Build and Push
+        needs: test
+        runs-on: ubuntu-latest
+        # Only run on main branch, not PRs
+        if: github.event_name != 'pull_request'
+        
+        permissions:
+          contents: read
+          packages: write
+        
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+          
+        - name: Log in to GitHub Container Registry
+          uses: docker/login-action@v1
+          with:
+            registry: ${{ env.REGISTRY }}
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+            
+        - name: Extract metadata for Docker
+          id: meta
+          uses: docker/metadata-action@v3
+          with:
+            images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            tags: |
+              type=semver,pattern={{version}}
+              type=sha,format=short
+              type=ref,event=branch
+              latest
+              
+        - name: Build and push Docker image
+          uses: docker/build-push-action@v2
+          with:
+            context: .
+            push: true
+            tags: ${{ steps.meta.outputs.tags }}
+            labels: ${{ steps.meta.outputs.labels }}  with:
+            context: .
+            push: true
+            tags: ${{ steps.meta.outputs.tags }}
+            labels: ${{ steps.meta.outputs.labels }}
+                
+        
 
